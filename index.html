@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Two Phone Camera Test</title>
+
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+
+  <style>
+    body {
+      font-family: Arial;
+      text-align: center;
+      padding: 20px;
+    }
+
+    video {
+      width: 100%;
+      max-width: 500px;
+      background: black;
+      margin-top: 15px;
+    }
+
+    button, input {
+      padding: 12px;
+      margin: 6px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+
+<body>
+
+<h2>Two-Phone Camera Test</h2>
+
+<p id="status">Connecting...</p>
+
+<h3>Your Camera</h3>
+<video id="localVideo" autoplay muted playsinline></video>
+
+<h3>Remote Camera</h3>
+<video id="remoteVideo" autoplay playsinline></video>
+
+<br>
+
+<button onclick="startCamera()">Start My Camera</button>
+
+<br>
+
+<input id="remoteId" placeholder="Enter other phone ID">
+<button onclick="callPhone()">Connect</button>
+
+<script>
+
+let peer;
+let localStream;
+
+peer = new Peer();
+
+peer.on('open', function(id) {
+  document.getElementById("status").innerHTML =
+    "Your Phone ID: <b>" + id + "</b>";
+});
+
+peer.on('call', async function(call) {
+
+  const consent = confirm(
+    "Another phone wants to view your camera. Allow?"
+  );
+
+  if (!consent) {
+    call.close();
+    return;
+  }
+
+  try {
+
+    localStream = await navigator.mediaDevices.getUserMedia({
+      video: true,
+      audio: false
+    });
+
+    document.getElementById("localVideo").srcObject = localStream;
+
+    call.answer(localStream);
+
+    call.on('stream', function(remoteStream) {
+      document.getElementById("remoteVideo").srcObject =
+        remoteStream;
+    });
+
+  } catch (error) {
+
+    alert("Camera permission denied.");
+
+    console.error(error);
+  }
+});
+
+async function startCamera() {
+
+  try {
+
+    localStream = await navigator.mediaDevices.getUserMedia({
+      video: true,
+      audio: false
+    });
+
+    document.getElementById("localVideo").srcObject =
+      localStream;
+
+  } catch (error) {
+
+    alert("Camera permission denied.");
+
+    console.error(error);
+  }
+}
+
+async function callPhone() {
+
+  if (!localStream) {
+
+    try {
+
+      localStream =
+        await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false
+        });
+
+      document.getElementById("localVideo").srcObject =
+        localStream;
+
+    } catch (error) {
+
+      alert("Camera permission denied.");
+
+      return;
+    }
+  }
+
+  const remoteId =
+    document.getElementById("remoteId").value.trim();
+
+  if (!remoteId) {
+    alert("Enter the other phone ID.");
+    return;
+  }
+
+  const call = peer.call(remoteId, localStream);
+
+  call.on('stream', function(remoteStream) {
+
+    document.getElementById("remoteVideo").srcObject =
+      remoteStream;
+
+  });
+}
+
+</script>
+
+</body>
+</html>
